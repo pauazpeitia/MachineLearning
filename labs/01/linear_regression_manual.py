@@ -42,7 +42,7 @@ def main(args: argparse.Namespace) -> float:
 
     # TODO: Solve the linear regression using the algorithm from the lecture,
     # explicitly computing the matrix inverse (using `np.linalg.inv`).
-
+    
     X_transpose = X_train.T
 
     X_transpose_dot_X = np.dot(X_transpose, X_train)

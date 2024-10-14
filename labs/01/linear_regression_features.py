@@ -27,38 +27,28 @@ def main(args: argparse.Namespace) -> list[float]:
         # TODO: Create features `(x^1, x^2, ..., x^order)`, preferably in this ordering.
         # Note that you can just append `x^order` to the features from the previous iteration.
 
-        def create_features(x, order):
-            features = x[:, np.newaxis]
-            
-            for i in range(2, order +1):
-                features = np.hstack((features, (x ** i)[:, np.newaxis]))
-            
-            return features
-
-
-
-
-
-
-
-
-
-
+        features = xs[:, np.newaxis]  
+        for i in range(2, order + 1):
+            features = np.hstack((features, (xs ** i)[:, np.newaxis]))  
 
         # TODO: Split the data into a train set and a test set.
         # Use `sklearn.model_selection.train_test_split` method call, passing
         # arguments `test_size=args.test_size, random_state=args.seed`.
+        
+        X_train, X_test, Y_train, Y_test = sklearn.model_selection.train_test_split(features, ys, test_size=args.test_size, random_state=args.seed)
+        
 
         # TODO: Fit a linear regression model using `sklearn.linear_model.LinearRegression`;
         # consult the documentation and see especially the `fit` method.
-        model = ...
+        model = sklearn.linear_model.LinearRegression()
 
         # TODO: Predict targets on the test set using the `predict` method of the trained model.
-
+        model.fit(X_train, Y_train)
+        predictions = model.predict(X_test)
         # TODO: Compute root mean square error on the test set predictions.
         # You can either do it manually, or you can look at the metrics offered
         # by the `sklearn.metrics` module.
-        rmse = ...
+        rmse = np.sqrt(sklearn.metrics.mean_squared_error(Y_test, predictions))
 
         rmses.append(rmse)
 
@@ -74,19 +64,15 @@ def main(args: argparse.Namespace) -> list[float]:
             plt.plot(np.linspace(xs[0], xs[-1], num=100),
                      model.predict(np.power.outer(np.linspace(xs[0], xs[-1], num=100), np.arange(1, order + 1))), "b")
             plt.show() if args.plot is True else plt.savefig(args.plot, transparent=True, bbox_inches="tight")
-x = np.array([1, 2, 3, 4, 5])  # Datos de entrada
-order = 3  # Orden del polinomio que queremos generar
-polynomial_features = create_features(x, order)
-print(polynomial_features)
-    
+
     return rmses
 
 
-#if __name__ == "__main__":
-#    main_args = parser.parse_args([] if "__file__" not in globals() else None)
-#    rmses = main(main_args)
-#    for order, rmse in enumerate(rmses):
-#        print("Maximum feature order {}: {:.2f} RMSE".format(order + 1, rmse))
+if __name__ == "__main__":
+    main_args = parser.parse_args([] if "__file__" not in globals() else None)
+    rmses = main(main_args)
+    for order, rmse in enumerate(rmses):
+        print("Maximum feature order {}: {:.2f} RMSE".format(order + 1, rmse))
 
 
 
