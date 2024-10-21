@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-
 import numpy as np
 import sklearn.compose
 import sklearn.datasets
@@ -18,47 +17,44 @@ parser.add_argument("--test_size", default=0.5, type=lambda x: int(x) if x.isdig
 
 
 def main(args: argparse.Namespace) -> tuple[np.ndarray, np.ndarray]:
-    dataset = getattr(sklearn.datasets, "load_{}".format(args.dataset))()
+    # Load the dataset
+    dataset = getattr(sklearn.datasets, f"load_{args.dataset}")()
 
-    # TODO: Split the dataset into a train set and a test set.
-    # Use `sklearn.model_selection.train_test_split` method call, passing
-    # arguments `test_size=args.test_size, random_state=args.seed`.
+    # Split the dataset into a train set and a test set
+    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
+        dataset.data, dataset.target, test_size=args.test_size, random_state=args.seed
+    )
 
-    # TODO: Process the input columns in the following way:
-    #
-    # - if a column has only integer values, consider it a categorical column
-    #   (days in a week, dog breed, ...; in general, integer values can also
-    #   represent numerical non-categorical values, but we use this assumption
-    #   for the sake of exercise). Encode the values with one-hot encoding
-    #   using `sklearn.preprocessing.OneHotEncoder` (note that its output is by
-    #   default sparse, you can use `sparse_output=False` to generate dense output;
-    #   also use `handle_unknown="ignore"` to ignore missing values in test set).
-    #
-    # - for the rest of the columns, normalize their values so that they
-    #   have mean 0 and variance 1; use `sklearn.preprocessing.StandardScaler`.
-    #
-    # In the output, first there should be all the one-hot categorical features,
-    # and then the real-valued features. To process different dataset columns
-    # differently, you can use `sklearn.compose.ColumnTransformer`.
+    # Identify categorical (integer) and numerical columns
+    categorical_columns = np.array([np.issubdtype(X_train[:, i].dtype, np.integer) for i in range(X_train.shape[1])])
+    numerical_columns = ~categorical_columns
 
-    # TODO: To the current features, append polynomial features of order 2.
-    # If the input values are `[a, b, c, d]`, you should append
-    # `[a^2, ab, ac, ad, b^2, bc, bd, c^2, cd, d^2]`. You can generate such polynomial
-    # features either manually, or you can employ the provided transformer
-    #   sklearn.preprocessing.PolynomialFeatures(2, include_bias=False)
-    # which appends such polynomial features of order 2 to the given features.
+    # Define the transformer for categorical columns: OneHotEncoder
+    categorical_transformer = sklearn.preprocessing.OneHotEncoder(sparse_output=False, handle_unknown="ignore")
 
-    # TODO: You can wrap all the feature processing steps into one transformer
-    # by using `sklearn.pipeline.Pipeline`. Although not strictly needed, it is
-    # usually comfortable.
+    # Define the transformer for numerical columns: StandardScaler
+    numerical_transformer = sklearn.preprocessing.StandardScaler()
 
-    # TODO: Fit the feature preprocessing steps (the composed pipeline with all of
-    # them; or the individual steps, if you prefer) on the training data (using `fit`).
-    # Then transform the training data into `train_data` (with a `transform` call;
-    # however, you can combine the two methods into a single `fit_transform` call).
-    # Finally, transform testing data to `test_data`.
-    train_data = ...
-    test_data = ...
+    # Combine them into a ColumnTransformer
+    preprocessor = sklearn.compose.ColumnTransformer(
+        transformers=[
+            ("cat", categorical_transformer, categorical_columns),
+            ("num", numerical_transformer, numerical_columns)
+        ]
+    )
+
+    # Add polynomial features of degree 2 to the preprocessed data
+    polynomial_features = sklearn.preprocessing.PolynomialFeatures(degree=2, include_bias=False)
+
+    # Combine preprocessing and polynomial features into a pipeline
+    pipeline = sklearn.pipeline.Pipeline([
+        ("preprocessor", preprocessor),
+        ("poly", polynomial_features)
+    ])
+
+    # Fit the pipeline on the training data and transform both training and test data
+    train_data = pipeline.fit_transform(X_train)
+    test_data = pipeline.transform(X_test)
 
     return train_data[:5], test_data[:5]
 
