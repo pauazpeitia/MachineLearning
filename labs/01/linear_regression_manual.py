@@ -17,7 +17,7 @@ def main(args: argparse.Namespace) -> float:
     # Load the diabetes dataset.
     dataset = sklearn.datasets.load_diabetes()
 
-
+    print(dataset.DESCR)
     # The input data are in `dataset.data`, targets are in `dataset.target`.
 
     # If you want to learn about the dataset, you can print some information
@@ -29,7 +29,7 @@ def main(args: argparse.Namespace) -> float:
     # Then we do not need to explicitly represent bias - it becomes the last weight.
 
     X = dataset.data
-    Y = dataset.target
+    Y = dataset.target 
     
     X = np.hstack((X, np.ones((X.shape[0], 1)))) 
 
