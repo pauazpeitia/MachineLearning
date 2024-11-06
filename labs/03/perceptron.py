@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+<<<<<<< HEAD
 
 #3d41c24d-1e20-459e-ab2e-5f0e184f26aa  --  Jose Mataix Perez
 #5ca5e08e-855f-41d0-9025-06918d611fd2  --  Antonio Trujillo Reino
@@ -7,6 +8,10 @@
 import argparse
 
 from matplotlib import pyplot as plt
+=======
+import argparse
+
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
 import numpy as np
 import sklearn.datasets
 
@@ -29,16 +34,24 @@ def main(args: argparse.Namespace) -> np.ndarray:
         n_clusters_per_class=1, flip_y=0, class_sep=2, random_state=args.seed)
     target = 2 * target - 1
 
+<<<<<<< HEAD
     # TODO: Append a constant feature with value 1 to the end of every input data.
     # Then we do not need to explicitly represent bias - it becomes the last weight.
     data = np.c_[data, np.ones(data.shape[0])]  # Add bias feature
+=======
+    # TODO: Append a constant feature with value 1 to the end of all input data.
+    # Then we do not need to explicitly represent bias - it becomes the last weight.
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
 
     # Generate initial perceptron weights.
     weights = np.zeros(data.shape[1])
 
     done = False
     while not done:
+<<<<<<< HEAD
         done = True  # Assume all instances are correctly classified
+=======
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
         permutation = generator.permutation(data.shape[0])
 
         # TODO: Implement the perceptron algorithm, notably one iteration
@@ -47,11 +60,14 @@ def main(args: argparse.Namespace) -> np.ndarray:
         # for incorrectly classified examples. If all training instances are
         # correctly classified, set `done=True`, otherwise set `done=False`.
 
+<<<<<<< HEAD
         for idx in permutation:
             if target[idx] * (data[idx] @ weights) <= 0:  # If misclassified
                 weights += target[idx] * data[idx]  # Update weights
                 done = False  # Set done to False since we have a misclassified example
 
+=======
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
         if args.plot and not done:
             import matplotlib.pyplot as plt
             if args.plot is not True:

@@ -25,7 +25,7 @@ def main(args: argparse.Namespace) -> float:
     #print(dataset.DESCR)
 
 
-    # TODO: Append a constant feature with value 1 to the end of every input data.
+    # TODO: Append a constant feature with value 1 to the end of all input data.
     # Then we do not need to explicitly represent bias - it becomes the last weight.
 
     X = dataset.data

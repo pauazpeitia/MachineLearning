@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+<<<<<<< HEAD
 
 #3d41c24d-1e20-459e-ab2e-5f0e184f26aa  --  Jose Mataix Perez
 #5ca5e08e-855f-41d0-9025-06918d611fd2  --  Antonio Trujillo Reino
 #e463771c-c409-4c11-b74f-687823d73cc2  --  Pau Azpeitia
 
+=======
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
 import argparse
 import lzma
 import os
@@ -14,10 +17,13 @@ import urllib.request
 
 import numpy as np
 import numpy.typing as npt
+<<<<<<< HEAD
 import sklearn.preprocessing
 import sklearn.linear_model
 import sklearn.compose
 import sklearn.pipeline
+=======
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
 
 parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
@@ -61,6 +67,7 @@ def main(args: argparse.Namespace) -> Optional[npt.ArrayLike]:
         train = Dataset()
 
         # TODO: Train a model on the given dataset and store it in `model`.
+<<<<<<< HEAD
         categoricalidxs = []
         floatidxs = []
 
@@ -93,6 +100,9 @@ def main(args: argparse.Namespace) -> Optional[npt.ArrayLike]:
         accuracy = np.divide(train_hits, np.shape(train.data)[0])
         
         print("Accuracy: "+str(accuracy*100)+" %")
+=======
+        model = ...
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
 
         # Serialize the model.
         with lzma.open(args.model_path, "wb") as model_file:
@@ -106,9 +116,13 @@ def main(args: argparse.Namespace) -> Optional[npt.ArrayLike]:
             model = pickle.load(model_file)
 
         # TODO: Generate `predictions` with the test set predictions.
+<<<<<<< HEAD
         data = test.data
         
         predictions = model.predict(data)
+=======
+        predictions = ...
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
 
         return predictions
 

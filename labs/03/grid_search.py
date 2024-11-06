@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
+<<<<<<< HEAD
 
 #5ca5e08e-855f-41d0-9025-06918d611fd2  --  Antonio Trujillo Reino
 #3d41c24d-1e20-459e-ab2e-5f0e184f26aa  --  Jose Mataix Perez
 #e463771c-c409-4c11-b74f-687823d73cc2  --  Pau Azpeitia
 
+=======
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
 import argparse
 
 import numpy as np
 import sklearn.datasets
+<<<<<<< HEAD
 import sklearn.metrics
 import sklearn.model_selection
 
@@ -18,12 +22,23 @@ parser.add_argument("--data_size", default=100, type=int, help="Data size")
 parser.add_argument("--epochs", default=50, type=int, help="Number of SGD training epochs")
 parser.add_argument("--learning_rate", default=0.01, type=float, help="Learning rate")
 parser.add_argument("--plot", default=True, const=True, nargs="?", type=str, help="Plot the predictions")
+=======
+import sklearn.linear_model
+import sklearn.metrics
+import sklearn.model_selection
+import sklearn.pipeline
+import sklearn.preprocessing
+
+parser = argparse.ArgumentParser()
+# These arguments will be set appropriately by ReCodEx, even if you change them.
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
 parser.add_argument("--recodex", default=False, action="store_true", help="Running in ReCodEx")
 parser.add_argument("--seed", default=42, type=int, help="Random seed")
 parser.add_argument("--test_size", default=0.5, type=lambda x: int(x) if x.isdigit() else float(x), help="Test size")
 # If you add more arguments, ReCodEx will keep them with your default values.
 
 
+<<<<<<< HEAD
 def main(args: argparse.Namespace) -> tuple[np.ndarray, list[tuple[float, float]]]:
     # Create a random generator with a given seed.
     generator = np.random.RandomState(args.seed)
@@ -36,11 +51,21 @@ def main(args: argparse.Namespace) -> tuple[np.ndarray, list[tuple[float, float]
     # Then we do not need to explicitly represent bias - it becomes the last weight.
 
     dataNew = np.hstack([data, np.ones((data.shape[0], 1))])
+=======
+def main(args: argparse.Namespace) -> float:
+    # Load the digits dataset.
+    dataset = sklearn.datasets.load_digits()
+    dataset.target = dataset.target % 2
+
+    # If you want to learn about the dataset, you can print some information
+    # about it using `print(dataset.DESCR)`.
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
 
     # TODO: Split the dataset into a train set and a test set.
     # Use `sklearn.model_selection.train_test_split` method call, passing
     # arguments `test_size=args.test_size, random_state=args.seed`.
 
+<<<<<<< HEAD
     train_data, test_data, train_target, test_target = sklearn.model_selection.train_test_split(dataNew, target, test_size=args.test_size, random_state=args.seed)
 
     # Generate initial logistic regression weights.
@@ -120,9 +145,50 @@ def main(args: argparse.Namespace) -> tuple[np.ndarray, list[tuple[float, float]
             plt.show() if args.plot is True else plt.savefig(args.plot, transparent=True, bbox_inches="tight")
 
     return weights, [(train_loss, 100 * train_accuracy), (test_loss, 100 * test_accuracy)]
+=======
+    # TODO: Create a pipeline, which
+    # 1. passes the inputs through `sklearn.preprocessing.MinMaxScaler()`,
+    # 2. passes the result through `sklearn.preprocessing.PolynomialFeatures()`,
+    # 3. passes the result through `sklearn.linear_model.LogisticRegression(random_state=args.seed)`.
+    #
+    # Then, using `sklearn.model_selection.StratifiedKFold` with 5 folds, evaluate
+    # crossvalidated train performance of all combinations of the following parameters:
+    # - polynomial degree: 1, 2
+    # - LogisticRegression regularization C: 0.01, 1, 100
+    # - LogisticRegression solver: lbfgs, sag
+    # Keep the other parameters at their default values.
+    #
+    # For the best combination of parameters, compute the test set accuracy.
+    #
+    # The easiest way is to use `sklearn.model_selection.GridSearchCV`.
+    test_accuracy = ...
+
+    # If `model` is a fitted `GridSearchCV`, you can use the following code
+    # to show the results of all the hyperparameter values evaluated:
+    #   for rank, accuracy, params in zip(model.cv_results_["rank_test_score"],
+    #                                     model.cv_results_["mean_test_score"],
+    #                                     model.cv_results_["params"]):
+    #       print("Rank: {:2d} Cross-val: {:.1f}%".format(rank, 100 * accuracy),
+    #             *("{}: {:<5}".format(key, value) for key, value in params.items()))
+
+    # Note that with some hyperparameter values above, the training does not
+    # converge in the default limit of 100 epochs and shows `ConvergenceWarning`s.
+    # You can verify that increasing the number of epochs influences the results
+    # only marginally, so there is no reason to do it. To get rid of the warnings,
+    # you can add `-W ignore::UserWarning` just after `python` on the command line,
+    # or you can use the following code (and the corresponding imports):
+    #   warnings.filterwarnings("ignore", category=sklearn.exceptions.ConvergenceWarning)
+
+    return 100 * test_accuracy
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
 
 
 if __name__ == "__main__":
     main_args = parser.parse_args([] if "__file__" not in globals() else None)
+<<<<<<< HEAD
     weights, metrics = main(main_args)
     print("Learned weights", *("{:.2f}".format(weight) for weight in weights))
+=======
+    test_accuracy = main(main_args)
+    print("Test accuracy: {:.2f}%".format(test_accuracy))
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb

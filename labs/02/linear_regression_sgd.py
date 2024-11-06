@@ -25,8 +25,13 @@ def main(args: argparse.Namespace) -> tuple[list[float], float, float]:
     # Generate an artificial regression dataset.
     data, target = sklearn.datasets.make_regression(n_samples=args.data_size, random_state=args.seed)
 
+<<<<<<< HEAD
     # Append a constant feature with value 1 to the end of every input data.
     data = np.hstack((data, np.ones((data.shape[0], 1))))  # Add bias term
+=======
+    # TODO: Append a constant feature with value 1 to the end of all input data.
+    # Then we do not need to explicitly represent bias - it becomes the last weight.
+>>>>>>> 7c8f32b4746c65d78016187284e728151e21c4bb
 
     # Split the dataset into a train set and a test set.
     train_data, test_data, train_target, test_target = sklearn.model_selection.train_test_split(
