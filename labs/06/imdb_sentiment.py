@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+#3d41c24d-1e20-459e-ab2e-5f0e184f26aa  --  Jose Mataix Perez
+#5ca5e08e-855f-41d0-9025-06918d611fd2  --  Antonio Trujillo Reino
+#e463771c-c409-4c11-b74f-687823d73cc2  --  Pau Azpeitia
+
 import argparse
 import lzma
 import os
@@ -12,6 +17,9 @@ import numpy.typing as npt
 import sklearn.feature_extraction
 import sklearn.metrics
 import sklearn.model_selection
+
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+from sklearn.svm import SVC
 
 parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
@@ -67,6 +75,16 @@ def load_word_embeddings(
     embeddings = {word: vector for word, vector in zip(words, vectors)}
     return embeddings
 
+def preprocess_text(text: str, embeddings: dict) -> np.ndarray:
+    """Preprocess text: remove stopwords and convert to vector."""
+    words = text.lower().split()
+
+    meaningful_words = [word for word in words if word not in ENGLISH_STOP_WORDS and word in embeddings]
+    if not meaningful_words:
+        return np.zeros(len(next(iter(embeddings.values()))))
+
+    vectors = [embeddings[word] for word in meaningful_words if word in embeddings]
+    return np.mean(vectors, axis=0)
 
 def main(args: argparse.Namespace) -> Optional[npt.ArrayLike]:
     word_embeddings = load_word_embeddings()
@@ -82,14 +100,21 @@ def main(args: argparse.Namespace) -> Optional[npt.ArrayLike]:
         # embeddings: averaging, max pooling, etc. You can also try to exclude
         # words that do not contribute much to the meaning of the sentence (stop
         # words). See `sklearn.feature_extraction._stop_words.ENGLISH_STOP_WORDS`.
-        train_as_vectors = ...
+        train_as_vectors = np.array([preprocess_text(review, word_embeddings) for review in train.data])
 
         train_x, validation_x, train_y, validation_y = sklearn.model_selection.train_test_split(
             train_as_vectors, train.target, test_size=0.25, random_state=args.seed)
 
         print("Training.", file=sys.stderr)
         # TODO: Train a model of your choice on the given data.
-        model = ...
+        parameters = {'C': [0.1, 1, 10, 100]}
+        model = SVC(kernel='linear', random_state=args.seed)
+        clf = sklearn.model_selection.GridSearchCV(model, parameters, cv=5)
+        clf.fit(train_x, train_y)
+
+        model = clf.best_estimator_
+
+        print("Best parameters found: ", clf.best_params_)
 
         print("Evaluation.", file=sys.stderr)
         validation_predictions = model.predict(validation_x)
@@ -109,11 +134,11 @@ def main(args: argparse.Namespace) -> Optional[npt.ArrayLike]:
 
         # TODO: Start by preprocessing the test data, ideally using the same
         # code as during training.
-        test_as_vectors = ...
+        test_as_vectors = np.array([preprocess_text(review, word_embeddings) for review in test.data])
 
         # TODO: Generate `predictions` with the test set predictions, either
         # as a Python list or a NumPy array.
-        predictions = ...
+        predictions = model.predict(test_as_vectors)
 
         return predictions
 

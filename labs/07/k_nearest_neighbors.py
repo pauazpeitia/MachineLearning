@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+#3d41c24d-1e20-459e-ab2e-5f0e184f26aa  --  Jose Mataix Perez
+#5ca5e08e-855f-41d0-9025-06918d611fd2  --  Antonio Trujillo Reino
+#e463771c-c409-4c11-b74f-687823d73cc2  --  Pau Azpeitia
+
 import argparse
 import os
 import sys
@@ -51,7 +56,7 @@ def main(args: argparse.Namespace) -> float:
     mnist.data = sklearn.preprocessing.MinMaxScaler().fit_transform(mnist.data)
     train_data, test_data, train_target, test_target = sklearn.model_selection.train_test_split(
         mnist.data, mnist.target, test_size=args.test_size, random_state=args.seed)
-
+    
     # TODO: Generate `test_predictions` with classes predicted for `test_data`.
     #
     # Find the `args.k` nearest neighbors, and use their most frequent target class
@@ -65,7 +70,35 @@ def main(args: argparse.Namespace) -> float:
     # - "uniform": all nearest neighbors have the same weight,
     # - "inverse": `1/distances` is used as weights,
     # - "softmax": `softmax(-distances)` is used as weights.
-    test_predictions = ...
+    
+    def compute_distances(train_data, test_point, p):
+        return np.sum(np.abs(train_data - test_point) ** p, axis=1) ** (1 / p)
+
+    def predict_single(test_point):
+        distances = compute_distances(train_data, test_point, args.p)
+
+        nearest_indices = np.argsort(distances)[:args.k]
+        nearest_labels = train_target[nearest_indices]
+        nearest_distances = distances[nearest_indices]
+
+        
+        if args.weights == "uniform":
+            weights = np.ones_like(nearest_distances)
+        elif args.weights == "inverse":
+            weights = 1 / (nearest_distances + 1e-5)  
+        elif args.weights == "softmax":
+            weights = np.exp(-nearest_distances)
+            weights /= np.sum(weights)
+        
+        
+        unique_labels, label_counts = np.unique(nearest_labels, return_counts=True)
+        weighted_votes = {label: 0 for label in unique_labels}
+        for i, label in enumerate(nearest_labels):
+            weighted_votes[label] += weights[i]
+
+        return min(weighted_votes, key=lambda label: (-weighted_votes[label], label))
+
+    test_predictions = np.array([predict_single(test_point) for test_point in test_data])
 
     accuracy = sklearn.metrics.accuracy_score(test_target, test_predictions)
 
@@ -76,7 +109,7 @@ def main(args: argparse.Namespace) -> float:
         examples = [[] for _ in range(10)]
         for i in range(len(test_predictions)):
             if test_predictions[i] != test_target[i] and not examples[test_target[i]]:
-                examples[test_target[i]] = [test_data[i], *train_data[test_neighbors[i]]]
+                examples[test_target[i]] = [test_data[i], *train_data[nearest_indices]]
         examples = [[img.reshape(28, 28) for img in example] for example in examples if example]
         examples = [[example[0]] + [np.zeros_like(example[0])] + example[1:] for example in examples]
         plt.imshow(np.concatenate([np.concatenate(example, axis=1) for example in examples], axis=0), cmap="gray")
@@ -92,3 +125,5 @@ if __name__ == "__main__":
     accuracy = main(main_args)
     print("K-nn accuracy for {} nearest neighbors, L_{} metric, {} weights: {:.2f}%".format(
         main_args.k, main_args.p, main_args.weights, accuracy))
+
+

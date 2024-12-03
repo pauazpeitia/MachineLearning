@@ -8,16 +8,18 @@ from typing import Optional
 import urllib.request
 
 import numpy as np
-import numpy.typing as npt
-from sklearn.neural_network import MLPClassifier
+from sklearn.neural_network import MLPClassifier  # Agregar esta línea
 
 parser = argparse.ArgumentParser()
+# Estos argumentos serán configurados por ReCodEx
 parser.add_argument("--predict", default=None, type=str, help="Path to the dataset to predict")
 parser.add_argument("--recodex", default=False, action="store_true", help="Running in ReCodEx")
 parser.add_argument("--seed", default=42, type=int, help="Random seed")
 parser.add_argument("--model_path", default="mnist_competition.model", type=str, help="Model path")
 
+
 class Dataset:
+    """MNIST Dataset."""
     def __init__(self, name="mnist.train.npz", data_size=None, url="https://ufal.mff.cuni.cz/~courses/npfl129/2425/datasets/"):
         if not os.path.exists(name):
             print("Downloading dataset {}...".format(name), file=sys.stderr)
@@ -29,32 +31,33 @@ class Dataset:
             setattr(self, key, value[:data_size])
         self.data = self.data.reshape([-1, 28*28]).astype(float)
 
-def main(args: argparse.Namespace) -> Optional[npt.ArrayLike]:
+
+def main(args: argparse.Namespace) -> Optional[np.ndarray]:
     if args.predict is None:
-        # We are training a model
+        # Entrenamiento del modelo
         np.random.seed(args.seed)
         train = Dataset()
 
-        # Train the model (e.g., MLPClassifier)
-        model = MLPClassifier(hidden_layer_sizes=(128,), max_iter=20, random_state=args.seed)
+        # Crear y entrenar el modelo
+        model = MLPClassifier(hidden_layer_sizes=(128,), max_iter=100, random_state=args.seed)
         model.fit(train.data, train.target)
 
-        # Serialize the trained model with compression
+        # Guardar el modelo
         with lzma.open(args.model_path, "wb") as model_file:
             pickle.dump(model, model_file)
 
     else:
-        # We are predicting
+        # Cargar el modelo y hacer predicciones
         test = Dataset(args.predict)
 
-        # Load the model
         with lzma.open(args.model_path, "rb") as model_file:
             model = pickle.load(model_file)
 
-        # Generate predictions
+        # Hacer predicciones sobre el conjunto de prueba
         predictions = model.predict(test.data)
 
         return predictions
+
 
 if __name__ == "__main__":
     main_args = parser.parse_args([] if "__file__" not in globals() else None)

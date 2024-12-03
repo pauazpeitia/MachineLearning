@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+#3d41c24d-1e20-459e-ab2e-5f0e184f26aa  --  Jose Mataix Perez
+#5ca5e08e-855f-41d0-9025-06918d611fd2  --  Antonio Trujillo Reino
+#e463771c-c409-4c11-b74f-687823d73cc2  --  Pau Azpeitia
+
 import argparse
 import lzma
 import os
@@ -9,6 +14,10 @@ import urllib.request
 
 import numpy as np
 import numpy.typing as npt
+import sklearn.model_selection
+import sklearn.linear_model
+import sklearn.pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
@@ -49,7 +58,12 @@ def main(args: argparse.Namespace) -> Optional[npt.ArrayLike]:
         train = Dataset()
 
         # TODO: Train a model on the given dataset and store it in `model`.
-        model = ...
+        train_data, train_target = train.data, train.target
+        train_data, test_data, train_target, test_target = sklearn.model_selection.train_test_split(train_data, train_target, test_size=0.6, random_state=args.seed)
+        tf = TfidfVectorizer()
+        lr= sklearn.linear_model.LogisticRegression()
+        clf = sklearn.pipeline.Pipeline(steps=[("tfid", tf),("modeler", lr)])
+        model = clf.fit(train_data,train_target)
 
         # Serialize the model.
         with lzma.open(args.model_path, "wb") as model_file:
@@ -64,7 +78,7 @@ def main(args: argparse.Namespace) -> Optional[npt.ArrayLike]:
 
         # TODO: Generate `predictions` with the test set predictions, either
         # as a Python list or a NumPy array.
-        predictions = ...
+        predictions = model.predict(test.data)
 
         return predictions
 

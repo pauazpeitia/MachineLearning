@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+#3d41c24d-1e20-459e-ab2e-5f0e184f26aa  --  Jose Mataix Perez
+#5ca5e08e-855f-41d0-9025-06918d611fd2  --  Antonio Trujillo Reino
+#e463771c-c409-4c11-b74f-687823d73cc2  --  Pau Azpeitia
+
 import argparse
 import lzma
 import pickle
@@ -10,6 +15,10 @@ import numpy as np
 import sklearn.linear_model
 import sklearn.metrics
 import sklearn.model_selection
+import sklearn.neighbors
+import re
+
+from collections import Counter
 
 parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
@@ -40,6 +49,13 @@ class NewsGroups:
         self.target = dataset.target[:data_size]
         self.target_names = dataset.target_names
 
+def extract_features(document, term_to_idx):
+        features_vector = np.zeros(len(term_to_idx), dtype=np.float32)
+        doc_term_freqs = Counter(re.findall(r'\w+', document))
+        for word, freq in doc_term_freqs.items():
+            if word in term_to_idx:
+                features_vector[term_to_idx[word]] = freq
+        return features_vector
 
 def main(args: argparse.Namespace) -> float:
     # Load the 20newsgroups data.
@@ -53,10 +69,16 @@ def main(args: argparse.Namespace) -> float:
     # in the training data. A term is every maximal sequence of at least 1 word character,
     # where a word character corresponds to a regular expression `\w`.
 
+    counter = Counter()
+    for i in train_data:
+        counter.update(re.findall(r'\w+', i))
+
+    frequent_terms = {word for word, freq in counter.items() if freq >= 2}
+    term_to_idx = {word: idx for idx, word in enumerate(sorted(frequent_terms))}
+
     # TODO: For each document, compute its features as
     # - term frequency (TF), if `args.tf` is set (term frequency is
-    #   proportional to the number of term occurrences but normalized to
-    #   sum to 1 over all features of a document);
+    #   proportional to counts but normalized to sum to 1);
     # - otherwise, use binary indicators (1 if a given term is present, else 0)
     #
     # Then, if `args.idf` is set, multiply the document features by the
@@ -65,11 +87,34 @@ def main(args: argparse.Namespace) -> float:
     # - the IDFs are computed on the train set and then reused without
     #   modification on the test set.
 
+    X_train_features = np.array([extract_features(doc, term_to_idx) for doc in train_data])
+    X_test_features = np.array([extract_features(doc, term_to_idx) for doc in test_data])
+
+    if args.tf:
+        train_sums = np.sum(X_train_features, axis=1, keepdims=True)
+        X_train_features = np.divide(X_train_features, train_sums, out=np.zeros_like(X_train_features), where=train_sums != 0)
+        test_sums = np.sum(X_test_features, axis=1, keepdims=True)
+        X_test_features = np.divide(X_test_features, test_sums, out=np.zeros_like(X_test_features), where=test_sums != 0)
+    
+    if not args.tf:
+        X_train_features = (X_train_features > 0).astype(float)
+        X_test_features = (X_test_features > 0).astype(float)
+    
+    if args.idf:
+        doc_freqs = np.sum(X_train_features > 0, axis=0)
+        idf_values = np.log(len(train_data) / (doc_freqs + 1))
+        X_train_features *= idf_values
+        X_test_features *= idf_values
+
     # TODO: Train a `sklearn.linear_model.LogisticRegression(solver="liblinear", C=10_000)`
     # model on the train set, and classify the test set.
 
+    model = sklearn.linear_model.LogisticRegression(solver="liblinear", C=10_000)
+    model.fit(X_train_features, train_target)
+
     # TODO: Evaluate the test set performance using a macro-averaged F1 score.
-    f1_score = ...
+    predictions = model.predict(X_test_features)
+    f1_score = sklearn.metrics.f1_score(test_target, predictions, average="macro")
 
     return 100 * f1_score
 

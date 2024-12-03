@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+#3d41c24d-1e20-459e-ab2e-5f0e184f26aa  --  Jose Mataix Perez
+#5ca5e08e-855f-41d0-9025-06918d611fd2  --  Antonio Trujillo Reino
+#e463771c-c409-4c11-b74f-687823d73cc2  --  Pau Azpeitia
+
 import argparse
 
 import numpy as np
@@ -37,6 +42,12 @@ def main(args: argparse.Namespace) -> tuple[tuple[np.ndarray, ...], list[float]]
                generator.uniform(size=[args.hidden_layer, args.classes], low=-0.1, high=0.1)]
     biases = [np.zeros(args.hidden_layer), np.zeros(args.classes)]
 
+    def softmax(x):
+        return np.exp(x) / np.sum(np.exp(x))
+
+    def ReLU(x):
+        return np.maximum(0, x)
+
     def forward(inputs):
         # TODO: Implement forward propagation, returning *both* the value of the hidden
         # layer and the value of the output layer.
@@ -52,7 +63,15 @@ def main(args: argparse.Namespace) -> tuple[tuple[np.ndarray, ...], list[float]]
         # in softmax can easily overflow. To avoid it, you should use the fact that
         # $softmax(z) = softmax(z + any_constant)$ and compute $softmax(z) = softmax(z - maximum_of_z)$.
         # That way we only exponentiate values which are non-positive, and overflow does not occur.
-        raise NotImplementedError()
+        hidden_layer = ReLU(inputs @ weights[0] + biases[0])
+
+        output_layer = hidden_layer @ weights[1] + biases[1]
+        output_layer = softmax(output_layer - np.max(output_layer))
+
+        return hidden_layer, output_layer
+    
+    def step_two(x):
+        return sum(x) * args.learning_rate / gradient_components
 
     for epoch in range(args.epochs):
         permutation = generator.permutation(train_data.shape[0])
@@ -74,9 +93,41 @@ def main(args: argparse.Namespace) -> tuple[tuple[np.ndarray, ...], list[float]]
         # - compute the derivative with respect to the hidden layer input,
         # - compute the derivative with respect to `weights[0]` and `biases[0]`.
 
+        bias_zero, weight_zero, bias_one, weight_one = [], [], [], []
+        gradient_components = 0
+        
+        #Step 1
+        for i in permutation:
+            aux = np.zeros(args.classes)
+            aux[train_target[i]] = 1
+            
+            hidden, output = forward(train_data[i])
+            bz = output - aux
+            wz = hidden.reshape(-1, 1) @ bz.reshape(1, -1)
+            wo_1 = train_data[i].reshape(-1, 1)
+            wo_2 = (bz @ weights[1].transpose() * (hidden > 0)).reshape(1, -1)
+
+            bias_zero.append(bz)
+            weight_zero.append(wz)
+            bias_one.append(bz @ weights[1].transpose() * (hidden > 0))
+            weight_one.append(wo_1 @ wo_2)
+            gradient_components += 1
+
+            #Step 2
+            if gradient_components == args.batch_size:
+                weights[0] -= step_two(weight_one)
+                weights[1] -= step_two(weight_zero)
+                biases[0] -= step_two(bias_one)
+                biases[1] -= step_two(bias_zero)
+                bias_zero, weight_zero, bias_one, weight_one = [], [], [], []
+                gradient_components = 0
+
         # TODO: After the SGD epoch, measure the accuracy for both the
         # train test and the test set.
-        train_accuracy, test_accuracy = ...
+        train_r = forward(train_data)[1]
+        test_r = forward(test_data)[1]
+        train_accuracy = sklearn.metrics.accuracy_score(train_target, np.argmax(train_r, axis=1))
+        test_accuracy = sklearn.metrics.accuracy_score(test_target, np.argmax(test_r, axis=1))
 
         print("After epoch {}: train acc {:.1f}%, test acc {:.1f}%".format(
             epoch + 1, 100 * train_accuracy, 100 * test_accuracy))

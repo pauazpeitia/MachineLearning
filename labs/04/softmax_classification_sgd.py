@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+#3d41c24d-1e20-459e-ab2e-5f0e184f26aa  --  Jose Mataix Perez
+#5ca5e08e-855f-41d0-9025-06918d611fd2  --  Antonio Trujillo Reino
+#e463771c-c409-4c11-b74f-687823d73cc2  --  Pau Azpeitia
+
 import argparse
 
 import numpy as np
@@ -16,7 +21,6 @@ parser.add_argument("--recodex", default=False, action="store_true", help="Runni
 parser.add_argument("--seed", default=42, type=int, help="Random seed")
 parser.add_argument("--test_size", default=797, type=lambda x: int(x) if x.isdigit() else float(x), help="Test size")
 # If you add more arguments, ReCodEx will keep them with your default values.
-
 
 def main(args: argparse.Namespace) -> tuple[np.ndarray, list[tuple[float, float]]]:
     # Create a random generator with a given seed.
@@ -37,6 +41,9 @@ def main(args: argparse.Namespace) -> tuple[np.ndarray, list[tuple[float, float]
 
     # Generate initial model weights.
     weights = generator.uniform(size=[train_data.shape[1], args.classes], low=-0.1, high=0.1)
+    
+    def softmax(x):
+        return np.exp(x) / np.sum(np.exp(x))
 
     for epoch in range(args.epochs):
         permutation = generator.permutation(train_data.shape[0])
@@ -50,10 +57,40 @@ def main(args: argparse.Namespace) -> tuple[np.ndarray, list[tuple[float, float]
         # $softmax(z) = softmax(z + any_constant)$ and compute $softmax(z) = softmax(z - maximum_of_z)$.
         # That way we only exponentiate non-positive values, and overflow does not occur.
 
+        for i in range(0, train_data.shape[0], args.batch_size):
+            batch_indices = permutation[i:i + args.batch_size]
+            batch_data = train_data[batch_indices]
+            batch_target = train_target[batch_indices]
+
+            # Forward pass and softmax
+            logits = batch_data @ weights
+            logits -= np.max(logits, axis=1, keepdims=True)  # Avoid overflow
+            softmax = np.exp(logits) / np.sum(np.exp(logits), axis=1, keepdims=True)
+
+            # Gradient calculation
+            target_one_hot = np.zeros_like(softmax)
+            target_one_hot[np.arange(args.batch_size), batch_target] = 1
+            gradient = batch_data.T @ (softmax - target_one_hot) / args.batch_size
+            weights -= args.learning_rate * gradient
+
         # TODO: After the SGD epoch, measure the average loss and accuracy for both the
         # train test and the test set. The loss is the average MLE loss (i.e., the
         # negative log-likelihood, or cross-entropy loss, or KL loss) per example.
-        train_accuracy, train_loss, test_accuracy, test_loss = ...
+        # Evaluation for train set
+        train_logits = train_data @ weights
+        train_logits -= np.max(train_logits, axis=1, keepdims=True)
+        train_softmax = np.exp(train_logits) / np.sum(np.exp(train_logits), axis=1, keepdims=True)
+        train_loss = -np.mean(np.log(train_softmax[np.arange(train_softmax.shape[0]), train_target]))
+        train_predictions = np.argmax(train_softmax, axis=1)
+        train_accuracy = np.mean(train_predictions == train_target)
+
+        # Evaluation for test set
+        test_logits = test_data @ weights
+        test_logits -= np.max(test_logits, axis=1, keepdims=True)
+        test_softmax = np.exp(test_logits) / np.sum(np.exp(test_logits), axis=1, keepdims=True)
+        test_loss = -np.mean(np.log(test_softmax[np.arange(test_softmax.shape[0]), test_target]))
+        test_predictions = np.argmax(test_softmax, axis=1)
+        test_accuracy = np.mean(test_predictions == test_target)
 
         print("After epoch {}: train loss {:.4f} acc {:.1f}%, test loss {:.4f} acc {:.1f}%".format(
             epoch + 1, train_loss, 100 * train_accuracy, test_loss, 100 * test_accuracy))
