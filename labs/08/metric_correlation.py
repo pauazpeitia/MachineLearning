@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+#3d41c24d-1e20-459e-ab2e-5f0e184f26aa  --  Jose Mataix Perez
+#5ca5e08e-855f-41d0-9025-06918d611fd2  --  Antonio Trujillo Reino
+#e463771c-c409-4c11-b74f-687823d73cc2  --  Pau Azpeitia
+
 import argparse
 import dataclasses
 
@@ -35,6 +40,14 @@ class ArtificialData:
                                       - generator.uniform(8, 13) * (predicted - correct)))
             self.sentences.append(self.Sentence(gold, predicted, correct, human_rating))
 
+def covariance(x, y):
+    x_mean = np.mean(x)
+    y_mean = np.mean(y)
+    return np.mean((x - x_mean) * (y - y_mean))
+
+def variance(x):
+    x_mean = np.mean(x)
+    return np.mean((x - x_mean) ** 2)
 
 def main(args: argparse.Namespace) -> tuple[float, float]:
     # Create the artificial data.
@@ -51,11 +64,16 @@ def main(args: argparse.Namespace) -> tuple[float, float]:
         sentences = generator.choice(data.sentences, size=len(data.sentences), replace=True)
 
         # TODO: Append the average of human ratings of `sentences` to `human_ratings`.
-        human_ratings.append(...)
+
+        avg_human_rating = np.mean([s.human_rating for s in sentences])
+        human_ratings.append(avg_human_rating)
 
         # TODO: Compute TP, FP, FN counts of predicted edits in `sentences`
         # and append them to `predictions`.
-        predictions.append(...)
+        tp = sum(s.predicted_correct for s in sentences)
+        fp = sum(s.predicted_edits - s.predicted_correct for s in sentences)
+        fn = sum(s.gold_edits - s.predicted_correct for s in sentences)
+        predictions.append((tp, fp, fn))
 
     # Compute Pearson correlation between F_beta score and human ratings
     # for betas between 0 and 2.
@@ -67,7 +85,21 @@ def main(args: argparse.Namespace) -> tuple[float, float]:
         # the counts in `predictions` and then manually compute the Pearson
         # correlation between the computed scores and `human_ratings`. Append
         # the result to `correlations`.
-        correlations.append(...)
+        f_betas = []
+        for tp, fp, fn in predictions:
+            precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+            recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+            f_beta = (1 + beta**2) * (precision * recall) / (beta**2 * precision + recall) if (precision + recall) > 0 else 0
+            f_betas.append(f_beta)
+        
+        human_ratings_arr = np.array(human_ratings)
+        f_betas_arr = np.array(f_betas)
+
+        cov = covariance(f_betas_arr, human_ratings_arr)
+        var_human = variance(human_ratings_arr)
+        var_fbetas = variance(f_betas_arr)
+        pearson = cov / (np.sqrt(var_fbetas) * np.sqrt(var_human))
+        correlations.append(pearson)
 
     if args.plot:
         import matplotlib.pyplot as plt
@@ -78,7 +110,9 @@ def main(args: argparse.Namespace) -> tuple[float, float]:
 
     # TODO: Assign the highest correlation to `best_correlation` and
     # store corresponding beta to `best_beta`.
-    best_beta, best_correlation = ...
+    best_index = np.argmax(correlations)
+    best_beta = betas[best_index]
+    best_correlation = correlations[best_index]
 
     return best_beta, best_correlation
 

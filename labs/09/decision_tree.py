@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
 import argparse
-
 import numpy as np
 import sklearn.datasets
 import sklearn.metrics
 import sklearn.model_selection
+from collections import Counter
 
 parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
@@ -18,49 +17,145 @@ parser.add_argument("--seed", default=42, type=int, help="Random seed")
 parser.add_argument("--test_size", default=0.25, type=lambda x: int(x) if x.isdigit() else float(x), help="Test size")
 # If you add more arguments, ReCodEx will keep them with your default values.
 
+def gini_impurity(groups, classes):  #Recibe dos grupos y calcula el gini
+    total_instances = sum(len(group) for group in groups)
+    gini = 0.0
+    for group in groups: #Realmente son dos grupos
+        size = len(group)
+        if size == 0:
+            continue
+        score = 0.0
+        group_classes = [row[-1] for row in group]  #Lista con las etiquetas (clase)
+        for class_val in classes:
+            proportion = group_classes.count(class_val) / size
+            score += proportion ** 2
+        gini += (1 - score) * (size / total_instances)
+    return gini
+
+def entropy(groups, classes):
+    total_instances = sum(len(group) for group in groups)
+    ent = 0.0
+    for group in groups:
+        size = len(group)
+        if size == 0:
+            continue
+        group_classes = [row[-1] for row in group]
+        scores = []
+        for class_val in classes:
+            proportion = group_classes.count(class_val) / size
+            if proportion > 0:
+                scores.append(-proportion * np.log2(proportion))
+        ent += sum(scores) * (size / total_instances)
+    return ent
+
+def split_data(index, value, dataset):
+    left, right = [], []
+    for row in dataset:
+        if row[index] < value:
+            left.append(row)
+        else:
+            right.append(row)
+    return left, right
+
+class DecisionTreeNode:
+    def __init__(self):
+        self.index = None
+        self.value = None
+        self.left = None
+        self.right = None
+        self.is_leaf = False
+        self.prediction = None
+
+class DecisionTree:
+    def __init__(self, criterion="gini", max_depth=None, min_to_split=2, max_leaves=None):
+        self.criterion = gini_impurity if criterion == "gini" else entropy
+        self.max_depth = max_depth
+        self.min_to_split = min_to_split
+        self.max_leaves = max_leaves
+        self.root = None
+        self.leaf_count = 0  # Para llevar la cuenta de las hojas
+
+    def fit(self, X, y):
+        dataset = np.column_stack((X, y))   #Datos de entrenamiento y sus respectivos targets
+        classes = np.unique(y)
+        self.root = self._build_tree(dataset, classes, 0)
+
+    def _build_tree(self, dataset, classes, depth):
+        node = DecisionTreeNode()
+        target_values = [row[-1] for row in dataset]
+
+        #Parar si alguna condicion lo impide 
+        if (self.max_depth is not None and depth >= self.max_depth) or len(set(target_values)) == 1 or len(dataset) < self.min_to_split or (self.max_leaves is not None and self.leaf_count >= self.max_leaves):
+            node.is_leaf = True
+            node.prediction = Counter(target_values).most_common(1)[0][0]
+            self.leaf_count += 1 
+            print(f"Leaf created. Total leaves: {self.leaf_count}") 
+            return node #termina
+        
+        #mjr split
+        best_index, best_value, best_score, best_groups = None, None, float('inf'), None
+        for index in range(len(dataset[0]) - 1):
+            unique_values = np.unique(dataset[:, index])
+            split_points = (unique_values[:-1] + unique_values[1:]) / 2
+
+            for value in split_points:
+                groups = split_data(index, value, dataset)
+                score = self.criterion(groups, classes)   #Aqui usa gini o entropy 
+
+                if score < best_score:
+                    best_index, best_value, best_score, best_groups = index, value, score, groups
+
+        if best_score == float('inf') or best_groups is None:
+            node.is_leaf = True
+            print(f"Leaf created. Total leaves: {self.leaf_count}")
+            node.prediction = Counter(target_values).most_common(1)[0][0]
+            self.leaf_count += 1  
+            return node
+
+        left_data, right_data = best_groups
+        node.index = best_index
+        node.value = best_value
+
+        node.left = self._build_tree(np.array(left_data), classes, depth + 1)
+        node.right = self._build_tree(np.array(right_data), classes, depth + 1)
+
+        return node
+
+    def predict(self, X):
+        return np.array([self._predict_row(row, self.root) for row in X])
+
+    def _predict_row(self, row, node):
+        if node.is_leaf:
+            return node.prediction
+        if row[node.index] < node.value:
+            return self._predict_row(row, node.left)
+        else:
+            return self._predict_row(row, node.right)
 
 def main(args: argparse.Namespace) -> tuple[float, float]:
-    # Use the given dataset.
     data, target = getattr(sklearn.datasets, "load_{}".format(args.dataset))(return_X_y=True)
 
     # Split the data randomly to train and test using `sklearn.model_selection.train_test_split`,
     # with `test_size=args.test_size` and `random_state=args.seed`.
     train_data, test_data, train_target, test_target = sklearn.model_selection.train_test_split(
         data, target, test_size=args.test_size, random_state=args.seed)
-
+    
     # TODO: Manually create a decision tree on the training data.
-    #
-    # - For each node, predict the most frequent class (and the one with
-    #   the smallest number if there are several such classes).
-    #
-    # - When splitting a node, consider the features in sequential order, then
-    #   for each feature consider all possible split points ordered in ascending
-    #   value, and perform the first encountered split decreasing the criterion
-    #   the most. Each split point is an average of two nearest unique feature values
-    #   of the instances corresponding to the given node (e.g., for four instances
-    #   with values 1, 7, 3, 3, the split points are 2 and 5).
-    #
-    # - Allow splitting a node only if:
-    #   - when `args.max_depth` is not `None`, its depth must be less than `args.max_depth`
-    #     (depth of the root node is zero);
-    #   - when `args.max_leaves` is not `None`, there are less than `args.max_leaves` leaves
-    #     (a leaf is a tree node without children);
-    #   - there are at least `args.min_to_split` corresponding instances;
-    #   - the criterion value is not zero.
-    #
-    # - When `args.max_leaves` is `None`, use recursive (left descendants first, then
-    #   right descendants) approach, splitting every node if the constraints are valid.
-    #   Otherwise (when `args.max_leaves` is not `None`), repeatably split a leaf where the
-    #   constraints are valid and the overall criterion value ($c_left + c_right - c_node$)
-    #   decreases the most. If there are several such nodes, choose the one
-    #   which was created sooner (a left child is considered to be created
-    #   before a right child).
+    tree = DecisionTree(
+        criterion=args.criterion,
+        max_depth=args.max_depth,
+        min_to_split=args.min_to_split,
+        max_leaves= args.max_leaves
+    )
+    tree.fit(train_data, train_target) #main
 
-    # TODO: Finally, measure the training and testing accuracy.
-    train_accuracy, test_accuracy = ...
+    train_predictions = tree.predict(train_data)
+    test_predictions = tree.predict(test_data)
+
+    train_accuracy = sklearn.metrics.accuracy_score(train_target, train_predictions)
+    test_accuracy = sklearn.metrics.accuracy_score(test_target, test_predictions)
 
     return 100 * train_accuracy, 100 * test_accuracy
-
 
 if __name__ == "__main__":
     main_args = parser.parse_args([] if "__file__" not in globals() else None)
