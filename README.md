@@ -1,13 +1,9 @@
-<<<<<<< HEAD
-#Proyectocreisi
-=======
-# Machine Learning for Greenhorns – ÚFAL Course NPFL129
+# Machine Learning Projects
 
-This repository contains materials to the
-[Machine Learning for Greenhorns (ÚFAL course NPFL129)](http://ufal.mff.cuni.cz/courses/npfl129).
+This repository contains projects and tasks from the "Introduction to Machine Learning" course. It includes notebooks, tasks, and examples related to machine learning concepts. Some of the most important projects have been summarized for easier reference.
 
-All created content is available under
-[CC BY-SA 4.0 license](https://creativecommons.org/licenses/by-sa/4.0/),
-while all existing materials (mostly images and excerpts from papers) are
-properly referenced and are subject to original licensing.
->>>>>>> cab3e76786da807c6ca739a1341319419cfed29f
+## Main Libraries 
+- NumPy
+- Pandas
+- Matplotlib
+- Scikit-learn
